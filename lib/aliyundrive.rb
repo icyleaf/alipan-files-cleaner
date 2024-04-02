@@ -53,7 +53,7 @@ class AliyunDrive
   def delete_file(file_id, drive_id: nil)
     drive_id ||= @default_drive_id
 
-    responses = _post("/v3/batch", {
+    response = _post("/v3/batch", {
       requests: [
         {
           body: {
@@ -71,10 +71,10 @@ class AliyunDrive
       resource: "file"
     })
 
-    response["response"].each do |file_response|
+    response["responses"].each do |file_response|
       next unless file_response["id"] == file_id
 
-      return true if file_response["code"] == "204"
+      return true if file_response["status"] == 204
       return file_response
     end
 

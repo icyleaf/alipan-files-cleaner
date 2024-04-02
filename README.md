@@ -6,11 +6,34 @@ If you are using free account of alipan, it limited drive disk, you can use this
 
 ### Docker
 
+#### Running only once
+
+```bash
+docker run -d --name aliyun-files-cleaner \
+  -e ALIPAN_REFRESH_TOKEN=abcedfg \
+  -e ALIPAN_FOLDER_ID=123456789 \
+  -e LOGGER_LEVEL=info \
+  gchr.io/icyleaf/aliyun-files-cleaner
+```
+
+#### Running in inverval mode (3600 seconds)
+
 ```bash
 docker run -d --name aliyun-files-cleaner \
   -e ALIPAN_REFRESH_TOKEN=abcedfg \
   -e ALIPAN_FOLDER_ID=123456789 \
   -e ALIPAN_RUNNER_INTERVAL=3600 \
+  -e LOGGER_LEVEL=info \
+  gchr.io/icyleaf/aliyun-files-cleaner
+```
+
+#### Running DRY mode (not delete files)
+
+```bash
+docker run -d --name aliyun-files-cleaner \
+  -e ALIPAN_REFRESH_TOKEN=abcedfg \
+  -e ALIPAN_FOLDER_ID=123456789 \
+  -e DRY_MODE=true \
   -e LOGGER_LEVEL=info \
   gchr.io/icyleaf/aliyun-files-cleaner
 ```

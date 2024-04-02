@@ -5,20 +5,18 @@ require "logger"
 require "uri"
 
 class Runner
-  VERSION = "0.1.1"
+  VERSION = "0.2.0"
 
   def self.run
     new.run
   end
 
   def run
-    interval = ENV.fetch("ALIPAN_RUNNER_INTERVAL", "300").to_i
-
     logger.info "Starting alipan resources runner ..."
     logger.info "cli v#{VERSION}, run_mode: #{run_mode}, dry_mode: #{dry_mode}"
     client.update_default_drive_id
 
-    run_loop(interval) do
+    run_loop do
       show_disk_capacity
 
       logger.info "Fetching files from drive_id #{client.default_drive_id} "
@@ -39,7 +37,7 @@ class Runner
 
         deleted_file = client.delete_file(file_id)
         case deleted_file
-        when False
+        when FalseClass
           logger.error("Delete file failed with unknown error: #{file_id} - #{file["name"]}")
         when Hash
           logger.error("Delete file failed with response: #{file_id} - #{file["name"]} - #{deleted_file}")
@@ -64,12 +62,12 @@ class Runner
 
   private
 
-  def run_loop(interval, &block)
+  def run_loop(&block)
     count = 0
     loop do
       block.call
 
-      break if oneshot?
+      exit if oneshort?
 
       logger.info "Waiting next loop ... (#{interval} seconds)"
       sleep(interval)
@@ -111,12 +109,16 @@ class Runner
     "#{bytes.round(2)} #{sizes[index]}"
   end
 
-  def oneshot?
-    run_mode == :oneshot
+  def oneshort?
+    run_mode == :oneshort
   end
 
   def run_mode
-    ENV["ONESHORT"] == "true" ? :oneshot : :interval
+    interval.zero? ? :oneshort : :interval
+  end
+
+  def interval
+    @interval ||= ENV.fetch("ALIPAN_RUNNER_INTERVAL", "0").to_i
   end
 
   def dry_mode
