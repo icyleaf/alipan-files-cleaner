@@ -5,7 +5,7 @@ require "logger"
 require "uri"
 
 class Runner
-  VERSION = "0.2.1"
+  VERSION = "0.2.2"
 
   def self.run
     new.run
@@ -18,9 +18,12 @@ class Runner
 
     run_loop do
       show_disk_capacity
+      cleaned_assets = {
+        file: 0,
+        folder: 0
+      }
 
       logger.info "Fetching files from drive_id #{client.default_drive_id} "
-      removed_files = 0
       alipan_files = client.files(folder_id).dig("items") || {}
       if alipan_files.empty?
         logger.info "Not found files, skipped."
@@ -29,12 +32,21 @@ class Runner
 
       logger.info "Prepare to delete #{alipan_files.size} file(s) ..."
       alipan_files.each do |file|
-        logger.info "Deleting #{file["type"]}: #{file["name"]} (#{binary_to_human(file["size"])})"
+        logger.debug "File information: #{file}"
         file_id = file["file_id"]
-        file_path = client.file_path(file_id) # NOTE: 可能是为了仿真手机操作
-        removed_files += file["size"]
+        file_type = file["type"].to_sym
+        cleaned_assets[file_type] += 1
+        case file_type
+        when :folder
+          logger.info "Deleting folder: #{file["name"]}"
+        when :file
+          file_size = file["size"]
+          logger.info "Deleting file: #{file["name"]} (#{binary_to_human(file_size)})"
+        end
+
         next if dry_mode
 
+        file_path = client.file_path(file_id) # NOTE: 可能是为了仿真手机操作
         deleted_file = client.delete_file(file_id)
         case deleted_file
         when FalseClass
@@ -44,7 +56,7 @@ class Runner
         end
       end
 
-      logger.info "Result: cleaned disk #{binary_to_human(removed_files)}."
+      calculate_stats(cleaned_assets)
     end
   rescue AliyunDrive::NotAuthorizedError => e
     logger.error "Invalid refresh token, Try to fetch a new one:  https://aliyundriver-refresh-token.vercel.app/"
@@ -62,17 +74,8 @@ class Runner
 
   private
 
-  def run_loop(&block)
-    count = 0
-    loop do
-      block.call
-
-      exit if oneshort?
-
-      logger.info "Waiting next loop ... (#{interval} seconds)"
-      sleep(interval)
-      count += 1
-    end
+  def calculate_stats(data)
+    logger.info "Cleaned finished: #{data[:folder]} folder(s), #{data[:file]} file(s)."
   end
 
   def show_disk_capacity
@@ -107,6 +110,19 @@ class Runner
       index += 1
     end
     "#{bytes.round(2)} #{sizes[index]}"
+  end
+
+  def run_loop(&block)
+    count = 0
+    loop do
+      block.call
+
+      exit if oneshort?
+
+      logger.info "Waiting next loop ... (#{interval} seconds)"
+      sleep(interval)
+      count += 1
+    end
   end
 
   def oneshort?
